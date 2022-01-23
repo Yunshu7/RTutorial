@@ -1,0 +1,216 @@
+---
+title: "Rstat6anova"
+author: "Yunshu Zhang"
+date: "1/16/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# R语言系列教学——常用统计函数
+# 方差分析(ANOVA)
+
+## 什么是方差分析？
+
+前面的各种模型都可以归纳为在解决预测问题
+Q：如何评价预测结果的好坏？
+A：预测与观测越接近越好
+Q：如果刻画“接近”？
+A：需要定义“距离”，一般我们使用残差的平方和(L2 loss)
+记为SS(Sum of Squares)
+$$
+SS = \sum\limits_{i = 1}^n {{{\left( {{y_i} - {\varphi _i}} \right)}^2}}  = {\left\| {{\mathbf{y}} - {\mathbf{\varphi }}} \right\|^2}
+$$
+它是我们给出预测$\varphi$的函数
+希望最小化残差的平方和
+
+Q：如果我们只有y的信息，我们应该如何预测？
+A：使用均值去预测所有情况
+记此时的残差平方和为SST(Sum of Squares Total)
+$$
+SST = \sum\limits_{i = 1}^n {{{\left( {{y_i} - \bar y} \right)}^2}} 
+$$
+除以n-1后正好是y方差的估计量
+
+Q：如果我们还有x的信息，我们能否改进我们的预测？
+A：使用各种模型刻画x与y的关系，记新的预测为${{{\hat y}_i}}$
+并记此时的残差平方和为SSE(Sum of Squares Error)
+$$
+SSE = \sum\limits_{i = 1}^n {{{\left( {{y_i} - {{\hat y}_i}} \right)}^2}} 
+$$
+显然SSE <= SST（不应该预测得更差）
+一个重要的观察是两个平方和的差值仍然是平方和的形式！
+记此时的平方和为SSM/SSR(Sum of Squares Model/Regreesion)
+$$
+SST - SSE = \sum\limits_{i = 1}^n {{{\left( {{y_i} - \bar y} \right)}^2}}  - \sum\limits_{i = 1}^n {{{\left( {{y_i} - {{\hat y}_i}} \right)}^2}}  = \sum\limits_{i = 1}^n {{{\left( {{{\hat y}_i} - \bar y} \right)}^2}}  = SSM
+$$
+可以看作当前预测和底线预测之间的差距
+
+因此我们有重要关系：
+$$
+SST = SSE + SSM
+$$
+故任何模型均可以看作是对SST的分解
+SSE越小，SSM越大，说明模型预测得越好
+将SSM所占SST的比例理解为方差被解释的程度，记为R方
+$$
+{R^2} = \frac{{SSM}}{{SST}} = 1 - \frac{{SSE}}{{SST}}
+$$
+
+但R方无法直接回答模型是否统计显著这个问题
+因为堆砌参数会不断增加R方（过拟合）
+我们希望公平地比较SSE与SSM
+因此我们引入平方和的平均值
+分别记为MSE(Mean squared error)和MSM(Mean squared model)
+$$
+\begin{gathered}
+  MSE = SSE/\left( {n - p} \right) \hfill \\
+  MSM = SSM/\left( {p - 1} \right) \hfill \\ 
+\end{gathered} 
+$$
+其中p为模型参数个数
+称分母为各自的自由度(degree of freedom)
+原因是SSE和SSM在零假设（模型无用）下为自由度为n-p和p-1的卡方分布
+进而有两者的比值服从自由度为n-p和p-1的F分布
+$$
+{F_{{\text{model}}}} = MSE/MSM
+$$
+
+将上述所有内容汇总起来
+记为方差分析表(ANOVA Table)
+
+## R语言中的实现
+
+```{r}
+data(mtcars)
+mod1 = lm(mpg ~ wt, data = mtcars)
+anova(mod1)
+```
+
+## 两个模型的比较
+之前的ANOVA可以看作是比较当前模型和只保留截距项的最简单模型
+类似地可推广至比较全模型(Full model)和简化模型(Reduced model)
+$$
+{F_{{\text{ModelCompar}}}} = \frac{{\left( {SS{E_{reduced}} - SS{E_{full}}} \right)/\left( {d{f_{full}} - d{f_{reduced}}} \right)}}{{MS{E_{full}}}}
+$$
+
+```{r}
+mod2 = lm(mpg ~ wt + am, data = mtcars)
+anova(mod1, mod2)
+```
+
+## 单因素方差分析(One-Way ANOVA)
+
+如果x（一维）是以类别变量的形式出现
+则之前的模型检验可以看作为检验各组之间是否存在显著差异
+如果差异存在，我们应用各组均值分别进行预测
+如果差异不存在，我们应用全体均值进行统一预测
+那么此时问题又回到了方差分析
+$$
+\begin{gathered}
+  SSE = \sum\limits_{i = 1}^r {\sum\limits_{j = 1}^{{n_i}} {{{\left( {{y_i} - {{\bar y}_{i \cdot }}} \right)}^2}} }  \hfill \\
+  SSM = \sum\limits_{i = 1}^r {\sum\limits_{j = 1}^{{n_i}} {{{\left( {{{\bar y}_{i \cdot }} - \bar y} \right)}^2}} }  \hfill \\
+  SST = \sum\limits_{i = 1}^r {\sum\limits_{j = 1}^{{n_i}} {{{\left( {{y_i} - \bar y} \right)}^2}} }  \hfill \\ 
+\end{gathered} 
+$$
+
+```{r}
+mtcars$am = factor(mtcars$am)
+mod3 = lm(mpg ~ am, data = mtcars)
+summary(mod3)
+anova(mod3)
+```
+
+注意此时系数的含义：与参照组的差值
+
+```{r}
+mtcars$cyl = factor(mtcars$cyl)
+mod4 = lm(mpg ~ cyl, data = mtcars)
+summary(mod4)
+anova(mod4)
+```
+
+也可以直接使用aov函数
+```{r}
+mod4_anova = aov(mpg ~ cyl, data = mtcars)
+summary(mod4_anova)
+```
+
+
+## 均值的多重比较
+
+ANOVA仅能告诉我们各组之间是否存在差异
+即便只有一组与其他组不同，也视为存在差异
+也就是说各组之间不一定都存在差异
+我们自然关心究竟哪些组相同/不同
+
+### 多重t检验
+
+```{r}
+pairwise.t.test(mtcars$mpg, mtcars$cyl)
+pairwise.t.test(mtcars$mpg, mtcars$cyl, p.adjust.method = "none")
+```
+
+### P值的修正
+
+单纯地重复使用t检验会增加第一类错误的概率
+需要对p value进行修正
+
+一种标准为控制family-wise error rate 
+常见方法为Bonferroni, Holm, Scheffe, Tukey
+如果我们需要对所有的两两组均进行检验，推荐使用Tukey
+但只接受aov函数生成的对象
+```{r}
+TukeyHSD(mod4_anova)
+```
+
+另一种标准为控制false discovery rate(FDR)
+一般针对组数较大的情况，只要求一定比例的检验结果是可靠的
+常见方法为Benjamini & Hochberg(BH)
+
+
+## 方差齐性检验
+
+对于类别型数据，同分布假设即意味着各组方差相同
+可以使用Bartlett检验
+```{r}
+bartlett.test(mpg ~ am, data = mtcars)
+```
+但该检验对正态性假设比较敏感
+可以改用Levene's test和Brown–Forsythe test
+需要对应的package
+
+如果方差齐性假设被拒绝，则不应使用简单的单因素方差分析
+```{r}
+bartlett.test(mpg ~ cyl, data = mtcars)
+oneway.test(mpg ~ cyl, data = mtcars)
+```
+不过前面的方法（如多重比较）也需要修正
+
+
+## 双因素方差检验(Two-Way ANOVA)
+
+考虑存在两个影响因素
+```{r}
+mod5 = aov(mpg ~ am + cyl, data = mtcars)
+summary(mod5)
+```
+
+```{r}
+TukeyHSD(mod5)
+```
+
+上述模型包含可加性假设
+即两个因素之间没有相互影响
+如果认为一个因素的效应会受到另一因素的影响
+则应该加入交互作用
+```{r}
+mod6 = aov(mpg ~ am + cyl + am * cyl, data = mtcars)
+summary(mod6)
+```
+
+以上操作均可推广至多因素下的方差分析
+
+

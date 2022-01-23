@@ -1,0 +1,62 @@
+---
+title: "Rstat3lm"
+author: "Yunshu Zhang"
+date: "12/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# R语言系列教学——常用统计函数
+# 线性回归模型基础
+
+$$
+{Y_i} = {\beta _0} + {\beta _1}{X_i} + {\varepsilon _i}
+$$
+
+# 为什么我们要用线性模型？
+简单
+广泛（非线性可以由线性近似；多元时线性拟合更好）
+
+```{r}
+plot(x = mtcars$wt, y = mtcars$mpg)
+```
+
+# 实现
+```{r}
+mod = lm(mpg ~ wt, data = mtcars)
+summary(mod)
+```
+
+系数：是否显著要看t value/p value/*数量，而不是绝对数值大小
+简单线性回归斜率系数显著程度即为模型显著程度（多元时则不然）
+R方和以上p-value存在决定关系，系数显著时也会很大
+可解释为Y与$\hat Y$的相关系数的平方
+简单线性回归下为X与Y的相关系数的平方
+
+# 估计
+```{r}
+res = summary(mod)
+res$coefficients
+c(res$coefficients[1,1] - qnorm(0.975) * res$coefficients[1,2], res$coefficients[1,1] + qnorm(0.975) * res$coefficients[1,2])
+c(res$coefficients[2,1] - qnorm(0.975) * res$coefficients[2,2], res$coefficients[2,1] + qnorm(0.975) * res$coefficients[2,2])
+res$sigma
+```
+
+# 预测
+```{r}
+mod$fitted.values
+predict(mod, newdata = data.frame(wt = c(1,2,3)))
+```
+
+
+
+
+
+
+
+
+
+

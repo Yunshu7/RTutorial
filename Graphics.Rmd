@@ -1,0 +1,519 @@
+---
+title: "Graphics"
+author: "Yunshu Zhang"
+date: "4/6/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 零、引言
+
+## 什么是数据可视化？
+Wiki：Data visualization is the graphic representation of data.
+
+## 为什么需要数据可视化？
+```{r}
+data(mtcars)
+View(mtcars)
+attach(mtcars)
+```
+
+展示数据
+```{r}
+hist(mpg)
+```
+
+提取信息
+```{r}
+plot(x = hp, y = mpg)
+```
+
+```{r}
+plot(x = hp, y = wt)
+```
+
+1、以更好的方式展示数据
+2、挖掘数据中有价值的信息
+
+## 为什么要用R做数据可视化？
+
+丰富的自带函数
+强大的函数包(eg. ggplot2)
+
+## PS：2D图
+## Credit to 数据科学导论 by 清华大学俞声老师
+
+
+
+
+
+cut
+
+
+
+
+
+# 一、通用基础指令
+
+## plot：散点图/折线图/......
+整合了points、lines等函数
+
+```{r}
+plot(mpg)
+```
+
+```{r}
+plot(mpg, type = "l")
+```
+
+plot兼容很多objects
+```{r}
+plot(sin, from = 0, to = 2*pi)
+```
+
+很多包都会使自己特有的object被plot兼容
+并产生特殊的plot
+```{r}
+fit = lm(mpg ~ hp)
+plot(fit)
+```
+
+
+
+
+cut
+
+
+
+
+## 图片的存储
+推荐在命令行执行plot代码后
+在右下角使用export功能
+（或者直接zoom然后微信截图= =）
+先生成pdf再截图的好处：往往更清晰
+
+代码实现：
+```{r}
+pdf("my plot.pdf", 4, 4) 
+plot(sin, from = 0, to = 2*pi)
+dev.off()
+```
+
+
+
+
+cut
+
+
+
+
+
+## plot常用参数介绍
+PS：往往适用于其他绘图函数
+
+### type：制图种类
+```{r}
+plot(mpg, type = "b")
+```
+
+### point symbols and line types：点线样式
+pch: symbol to use for points
+cex: points symbol size
+lty: line type
+lwd: line width
+```{r}
+plot(mpg, type = "b", pch = 4, cex = 2, lty = 2, lwd = 2)
+```
+
+### xlim, ylim：坐标轴范围
+```{r}
+plot(mpg, xlim = c(5, 15), ylim = c(15, 25))
+```
+
+### title：标题
+main: overall title
+sub: sub title
+xlab/ylab: title for x/y axis
+```{r}
+plot(x = hp, y = mpg, main = "Miles/gallon vs. Gross horsepower", sub = "Figure 1", xlab = "Gross horsepower", ylab = "Miles/gallon")
+```
+
+
+
+
+cut
+
+
+
+
+### color： 色彩
+
+col: plotting color
+col.axis, col.lab, col.main, col.sub
+fg: foreground color
+bg: background color
+```{r}
+par(bg = "yellow")
+plot(x = hp, y = mpg, main = "Miles/gallon vs. Gross horsepower", sub = "Figure 1", xlab = "Gross horsepower", ylab = "Miles/gallon", col = "red", col.axis = "blue", col.lab = "green", col.main = "orange", col.sub = "pink", fg = "chocolate")
+```
+
+```{r}
+plot(mpg)
+# par("usr")
+rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "gray")
+points(mpg)
+```
+
+指定颜色的方法：
+数字、名字、十六进制数、rgb、hsv
+```{r}
+plot(x = hp, y = mpg, main = "Miles/gallon vs. Gross horsepower", sub = "Figure 1", xlab = "Gross horsepower", ylab = "Miles/gallon", col = "red", col.axis = 4, col.lab = "#00cc44", col.main = rgb(0, 204, 68, maxColorValue = 255), col.sub = hsv(320/360, 48/100, 1), fg = "chocolate")
+```
+
+col 可以接受向量值
+但是并不能分别赋予点和线不同的颜色（之后讲方法）
+```{r}
+plot(mpg, type = "b", col = c("red", "blue"))
+```
+
+多色彩的选择：
+调色板palettes：rainbow(), heat.colors()...
+```{r}
+plot(mpg, type = "b", col = rainbow(7))
+plot(mpg, type = "b", col = heat.colors(5))
+```
+
+色彩方案RColorBrewer: http://colorbrewer2.org/
+```{r}
+col5 = c(rgb(166,97,26, maxColorValue = 255),rgb(223,194,125, maxColorValue = 255),rgb(245,245,245, maxColorValue = 255),rgb(128,205,193, maxColorValue = 255),rgb(1,133,113, maxColorValue = 255))
+plot(mpg, type = "b", col = col5)
+```
+
+
+
+
+cut
+
+
+
+
+### cex,font：文字的大小与样式
+cex.axis, cex.lab, cex.main, cex.sub
+font.axis, font.lab, font.main, font.sub: 1=plain, 2=bold, 3=italic, 4=bold italic
+```{r}
+plot(x = hp, y = mpg, main = "Miles/gallon vs. Gross horsepower", sub = "Figure 1", xlab = "Gross horsepower", ylab = "Miles/gallon", cex.main = 1.5, font.main = 4)
+```
+
+
+## text：添加文字
+x,y,label可指定为等长向量
+pos：文字相对于指定坐标的位置
+```{r}
+plot(wt, mpg, main="Mileage vs. Car Weight", xlab="Weight", ylab="Mileage", pch=18, col="blue") 
+text(5, 30, "省油的大车\n是不存在的")
+text(x = wt, y = mpg, label = row.names(mtcars), cex=0.6, pos=4, col="red")
+```
+
+## legend：图例
+首先指定图例位置：二维坐标或文字
+其次指定文字内容
+然后指定样式：pch、lty、col
+title（图例标题），inset（与边框间距）
+```{r}
+plot(x = wt[which(am == 0)], y = mpg[which(am == 0)], xlab="Weight", ylab="Mileage", pch=18, col="blue", xlim = c(1, 6), ylim = c(10, 35))
+points(x = wt[which(am == 1)], y = mpg[which(am == 1)], xlab="Weight", ylab="Mileage", pch=8, col="red")
+legend("topright", c("automatic", "manual"), pch = c(18, 8), col = c("blue", "red"), title = "Transmission", inset = 0.05)
+```
+
+
+
+# 二、常用统计图
+
+## Bar plot
+直观展现数据每一类别数量的绝对与相对多少
+饼状图(Pie chart)在展现相对占比方面稍强
+但信息量总体不如柱状图，统计圈一般很少用
+建议与table函数搭配使用（统计每一类的数量）
+```{r}
+counts = table(gear)
+counts
+```
+
+horiz: 水平柱状图(此时需交换xlab和ylab)
+```{r}
+barplot(counts, xlab = "Number of forward gears", ylab = "Frequency")
+```
+
+table同样可以处理由二维变量生成的多类别数据
+```{r}
+counts2 = table(gear, vs)
+counts2
+```
+
+进而通过例如染色的方式呈现于barplot上
+legend作为argument可以自动生成图例
+使用args.legend将一个list of arguments传给legend
+beside可以使各小类按列group，而非叠摞在一起
+```{r}
+barplot(counts2, col = c("red", "yellow", "green"), xlab = "engine", ylab = "frequency",
+        legend = rownames(counts2), args.legend	= list(x = "topright", inset = 0.04, title = "gear"), ylim = c(0, 24))
+barplot(counts2, col = c("red", "yellow", "green"), xlab = "engine", ylab = "frequency",
+        legend = rownames(counts2), args.legend	= list(x = "topright", inset = 0.04, title = "gear"), beside = TRUE)
+```
+
+## Histogram
+展示一维数值型数据的分布
+breaks调整截断点：
+可通过向量直接指定（建议，搭配seq使用，但必须覆盖数据范围）
+也可指定柱的数量（但实际可能小于）
+或者指明计算的函数/算法
+freq表示显示绝对大小or密度
+```{r}
+hist(mpg, breaks = seq(from = 10, to = 40, by = 10), freq = F)
+```
+
+## Density
+另一种展示一维数值型数据分布的方法
+可理解为平滑版的histogram
+并不直接绘图，而是先基于kernel估计密度
+再搭配plot或lines使用
+利用polygon可以对曲线下区域进行染色
+rug可以标记出数据点的位置
+```{r}
+d = density(mpg)
+plot(d, main = "Kernel density of miles per gallon")
+polygon(d, col = "red")
+rug(mpg, col = "grey")
+```
+
+使用lines将density画在histogram上
+```{r}
+hist(mpg, freq = F, col = "red")
+lines(d, col = "blue", lwd = 2)
+```
+
+## Boxplot
+同样是一种展示一维数值型数据的方法
+侧重于分位数和离群值
+```{r}
+boxplot(mpg)
+```
+
+可接受公式型对象
+从而进行组间对比
+```{r}
+boxplot(mpg ~ cyl, main = "Car Mileage Data", xlab = "Number of Cylinders", ylab = "Miles Per Gallon")
+```
+
+亦可针对二维变量交叉出的分组进行绘图
+需要借助factor
+varwidth:使得宽度体现各组的样本量
+```{r}
+cyl.f = factor(cyl, levels = c(4, 6, 8), labels = c("4", "6", "8"))
+am.f = factor(am, levels = c(0, 1), labels = c("auto", "standard"))
+boxplot(mpg ~ am.f *cyl.f, varwidth = T, col = c("gold", "darkgreen"), main = "MPG Distribution by Auto Type", xlab = "Auto Type", ylab = "Miles Per Gallon")
+```
+
+## Dotplot
+展示带名字的一维数据
+利用labels显示rownames
+```{r}
+dotchart(mpg, labels = row.names(mtcars), cex = 0.7, main = "Gas Mileage for Car Models", xlab = "Miles Per Gallon")
+```
+
+为了更好地展示数据
+可以对数据进行排序、分组与染色
+为了使得组名在图上显示出来
+必须首先将数据factor化
+```{r}
+x = mtcars[order(mpg),]
+
+x$cyl = factor(x$cyl)
+
+x$color[x$cyl == 4] = "red"
+x$color[x$cyl == 6] = "blue"
+x$color[x$cyl == 8] = "darkgreen"
+
+dotchart(x$mpg, labels = row.names(x), cex = 0.6, groups = x$cyl, gcolor = "black", color = x$color, pch = 19, main = "Gas Mileage for Car Models grouped by cylinder", xlab = "Miles Per Gallon")
+```
+
+
+## corrgram
+展示dataframe各个变量之间的相关关系
+推荐使用corrgram包
+```{r}
+install.packages("corrgram")
+library(corrgram)
+```
+
+根据需求设置lower/upper/diag.panel
+```{r}
+corrgram(mtcars, lower.panel = panel.pts, upper.panel = panel.cor)
+```
+
+
+## plot.matrix
+矩阵数据往往不易观察（尤其是大矩阵）
+可通过绘图的方式展示数据
+需使用plot.matrix包
+然后即可直接plot matrix
+```{r}
+install.packages("plot.matrix")
+library(plot.matrix)
+```
+
+```{r}
+m = 4
+q = 8
+w = 5
+
+library(HadamardR)
+H = Hadamard_Matrix(m)
+T = Hadamard_Matrix(q)
+T = T[sample(1:q, size = w),]
+
+X = kronecker(H, T)
+XTX = t(X) %*% X
+```
+
+```{r}
+plot(XTX)
+```
+
+```{r}
+# generate a zero matrix
+# change the value into 1 where XTX is nonzero
+XTX_01 = matrix(0, nrow = nrow(XTX), ncol = ncol(XTX))
+nonzero_index = which(XTX != 0)
+XTX_01[nonzero_index] = 1
+
+plot(XTX_01, main = "Bolck diagonal structure of XTX")
+```
+
+
+# 三、多图形的绘制
+
+## 一个位置多张图
+points，lines，abline
+必须依赖于已建立的plot
+```{r}
+plot(mpg, col = "red")
+lines(mpg)
+```
+
+注意x、y的范围
+```{r}
+range(mpg[am == 0])
+range(mpg[am == 1])
+length(am == 0)
+length(am == 1)
+```
+
+```{r}
+plot(mpg[am == 0], col = "red", ylim = c(10, 35), main = "Miles Per Gallon", ylab = "MPG")
+points(mpg[am == 1], col = "blue")
+legend("topright", c("automatic", "manual"), col = c("red", "blue"), pch = 1)
+```
+
+利用lines绘制density
+```{r}
+d = density(mpg)
+hist(mpg, freq = F, col = "red")
+lines(d, col = "blue", lwd = 2)
+```
+
+利用lines绘制多条曲线
+```{r}
+tmp0 = cbind(mpg[am == 0], wt[am == 0])
+tmp0 = tmp0[order(tmp0[,2]),]
+tmp1 = cbind(mpg[am == 1], wt[am == 1])
+tmp1 = tmp1[order(tmp1[,2]),]
+```
+
+```{r}
+summary(tmp0)
+summary(tmp1)
+```
+
+
+```{r}
+plot(x = tmp0[,2], y = tmp0[,1], col = "red", xlim = c(2, 6), ylim = c(10, 35), type = "l", main = "MPG vs Weight", xlab = "Weight", ylab = "MPG")
+lines(x = tmp1[,2], y = tmp1[,1], col = "blue")
+legend("topright", c("automatic", "manual"), col = c("red", "blue"), lty = 1)
+```
+
+```{r}
+lm(mpg ~ wt)
+```
+
+abline可以画水平、垂直以及斜线
+```{r}
+plot(x = wt, y = mpg)
+abline(a = 37.285, b = -5.344, col = "red", lty = 1)
+abline(h = 10, col = "grey", lty = 2)
+abline(v = 4.5, col = "grey", lty = 2)
+```
+
+## 多个位置多张图
+
+### par
+绘图的全局变量
+记得存储默认值
+```{r}
+plot(mpg, type = "b")
+defaulf.par = par(no.readonly=TRUE) # copy default settings 
+par(lty=2, pch=17)
+plot(mpg, type = "b")
+par(defaulf.par) # load back
+plot(mpg, type = "b")
+```
+
+mfrow：按行排列子图
+mfcol：按列排列子图
+```{r}
+opar <- par(no.readonly=TRUE) 
+par(mfrow=c(2,2)) 
+plot(wt,mpg, main="Scatterplot of wt vs. mpg") 
+plot(wt,disp, main="Scatterplot of wt vs. disp") 
+hist(wt, main="Histogram of wt") 
+boxplot(wt, main="Boxplot of wt")
+par(opar)
+```
+
+
+### patchwork
+only works for ggplot2
+
+```{r}
+library(ggplot2)
+library(patchwork)
+
+d1 <- runif(500)
+d2 <- rep(c("Treatment","Control"),each=250)
+d3 <- rbeta(500,shape1=100,shape2=3)
+d4 <- d3 + rnorm(500,mean=0,sd=0.1)
+plotData <- data.frame(d1,d2,d3,d4)
+```
+
+```{r}
+p1 <- ggplot(data=plotData) + geom_point(aes(x=d3, y=d4))
+p1
+```
+
+
+```{r}
+p2 <- ggplot(data=plotData) + geom_boxplot(aes(x=d2,y=d1,fill=d2))+
+theme(legend.position="none")
+p2
+```
+
+
+```{r}
+p1 | p2
+```
+
+
+

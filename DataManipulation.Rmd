@@ -1,0 +1,327 @@
+---
+title: "DataManipulation"
+author: "Yunshu Zhang"
+date: "2019/12/12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#引言
+It is often said that 80% of data analysis is spent on the process of cleaning and preparing the data. —— Dasu and Johnson, 2003
+
+什么是数据清洗？
+英文：Data cleaning/Data manipulation(操纵)
+Wiki: Data cleansing or data cleaning is the process of detecting and correcting (or removing) corrupt or inaccurate records from a record set, table, or database and refers to identifying incomplete, incorrect, inaccurate or irrelevant parts of the data and then replacing, modifying, or deleting the dirty or coarse data.
+个人理解：不基于统计算法的数据处理，目的是为了使数据的格式统一且满足统计算法的要求，方法主要包括数据的筛选、组合
+工具：R basic functions, R packages such as dplyr & tidyr by Hadley Wickham(COPSS 2019)
+
+credit to 清华大学俞声老师的“数据科学导论”课程
+R-Programming-for-Data-Science-(2015)
+
+PS:如果对R/Rstuidio/Rmarkdown不熟悉的话，欢迎观看“R语言基础教学” b站av33391460
+
+#R基础函数
+##筛选
+###通过位置
+####向量
+```{r}
+x = (1:10)*10
+x[2]
+x[-2]
+x[2:4]
+x[-(2:4)]
+x[-2:-4]
+x[c(2,4)]
+x[c(0,-2)]
+try(x[c(-1,2)])
+```
+
+####矩阵/Data Frame
+```{r}
+data("iris")
+iris[1,1]
+iris[1,]
+sl = iris[,1]
+sw = iris$Sepal.Width
+iris[-1,-1]
+iris[,-5]
+```
+
+总结：数字=位置=逻辑,"+"表示取，"-"表示不取
+
+
+###通过逻辑
+由T/F组成的vector（一般与原数据等长）
+```{r}
+x[x == 50]
+x[x < 50]
+x < 50
+iris[sl > 5,]
+```
+
+常用函数
+%in%：判断前者中的每一个元素是否在后者中出现
+```{r}
+x[x %in% 40:60]
+x %in% 40:60
+```
+因此本质上是通过条件取子集
+
+unique：唯一元素，去除重复
+duplicated：逻辑向量，判断当前元素是否在之前出现过
+```{r}
+unique(iris[,"Species"])
+duplicated(iris[,"Species"])
+iris[,"Species"][!duplicated(iris[,"Species"])]
+```
+
+which：返回满足条件的位置
+which.min：返回最小值第一次出现的位置
+which.max：返回最大值第一次出现的位置
+```{r}
+x[which(x < 50)]
+which(x < 50)
+which(duplicated(iris[,"Species"]) == F)
+iris[which(duplicated(iris[,"Species"]) == F), ]
+which.min(x)
+which.max(x)
+which(x == min(x))
+x[which.min(x)]
+```
+因此本质上是通过位置取子集
+
+sample：随机抽样
+```{r}
+set.seed(1) #种子，保证每次结果一样
+sample(x, size = length(x), replace = F) #无放回，洗牌
+sample(x, size = length(x), replace = T) #有放回，bootstrap
+iris[sample(1:nrow(iris), 5), ]
+```
+通过sample(1:n)来实现通过位置的取子集
+
+order:排序
+根据第一个向量来进行排序
+如果出现平局，则比较下一个向量的相应元素
+```{r}
+x <- c(1,1,3:1,1:4,3)
+y <- c(9,9:1)
+z <- c(2,1:9)
+rbind(x, y, z)
+i1 <- order(x, y, z)
+rbind(x, y, z)[,i1]
+i2 <- order(x, -y, z)
+rbind(x, y, z)[,i2]
+```
+
+grep：判断给定字符串是否出现，返回位置
+grepl：判断给定字符串是否出现，返回逻辑值
+（例子往下看）
+
+###通过名字
+需要一个起好名字的data.frame
+```{r}
+iris[1:5,"Species"]
+iris[1:5,c("Sepal.Length", "Sepal.Width")]
+colnames(iris)
+iris[1:5,"Sepal" %in% colnames(iris)]
+grep("Sepal", colnames(iris))
+iris[1:5, grep("Sepal", colnames(iris))]
+grepl("Sepal", colnames(iris))
+iris[1:5, grepl("Sepal", colnames(iris))]
+try(iris[1:5, -"Species"])
+iris[1:5, !colnames(iris) == c("Species")]
+iris[1:5, !colnames(iris) %in% c("Sepal.Length", "Sepal.Width")]
+```
+
+###subset函数
+subset(data, condition, select)
+```{r}
+subset(iris, Sepal.Length > 7 & Sepal.Width > 3, select = c(Sepal.Length, Sepal.Width))
+subset(iris, Sepal.Length + Sepal.Width > 10, select = -Species)
+subset(iris, Sepal.Length + Sepal.Width > 10, select = Sepal.Length:Petal.Width)
+```
+好处：名字不用加""，可以加“-”和":"
+坏处：功能可以被[which(),"colname"]几乎完全代替，后者泛用性更强（比如条件由其他数据决定）
+
+##合并
+###rbind,cbind
+最常用的合并方法
+```{r}
+rbind(iris[1,], iris[2,])
+sepal = cbind(iris$Sepal.Length, iris$Sepal.Width)
+```
+
+###match
+找到对应的序号
+nomatch：NA->0，从而可以作为index用
+很麻烦
+```{r}
+# a = 1:10
+# b = 7:20
+a = 1:10
+b = 20:7
+match(a, b)
+match(a, b, nomatch = 0)
+match(b, a, nomatch = 0)
+b[match(a, b, nomatch = 0)]
+df1 = cbind(a, a^2)
+df2 = cbind(b, b^3)
+df2[match(a, b, nomatch = 0),]
+df1[match(b, a, nomatch = 0),]
+cbind(df1[match(b, a, nomatch = 0),], df2[match(a, b, nomatch = 0),-1]) #错的
+cbind(df1[match(b, a, nomatch = 0),], df2[which(!is.na(match(b,a))),-1]) #对的
+```
+
+休息一下，斗鱼重新录制
+
+#dplyr
+Google面试都提到过这个包
+然而我个人没怎么用过。。。
+```{r}
+library("dplyr")
+```
+
+
+##tbl class
+data frame的子类
+```{r}
+iris2 = tbl_df(iris)
+iris2
+glimpse(iris2)
+```
+
+##筛选
+###select
+对列取子集
+之前讲过的通过位置、名字取子集的方法仍适用
+但不能用逻辑！
+```{r}
+select(iris2,1:2)
+try(select(iris2,grepl("Sepal", colnames(iris2))))
+select(iris2, c("Sepal.Length", "Sepal.Width"))
+select(iris2, -Species)
+```
+
+辅助函数很强大！
+```{r}
+select(iris2, contains("."))
+select(iris2, starts_with("Sepal"))
+select(iris2, ends_with("Length"))
+select(iris2, everything())
+select(iris, one_of(c("Species","Genus")))
+select(iris2, matches(".t.")) #___+t+___
+select(iris2, num_range("x",1:5)) #x1,...,x5
+```
+
+###行选取函数
+####filter
+对行取子集
+可以通过逻辑，但是不能通过位置！
+```{r}
+try(filter(iris2, 1:10))
+filter(iris2, Sepal.Length > 5)
+```
+
+####slice
+通过位置取子集
+（虽然不知道有什么卵用。。。）
+```{r}
+slice(iris2, 1:5)
+```
+
+####distinct
+```{r}
+distinct(iris2)
+```
+
+####sample
+```{r}
+sample_frac(iris2, 0.1, replace = T)
+sample_n(iris,10,replace = T)
+```
+
+####arrange
+stable排序
+```{r}
+arrange(iris2, Sepal.Length)
+arrange(iris2, desc(Sepal.Length))
+```
+
+##合并
+通过相同列名进行合并（因此需要取名）
+可以match多个列
+此时也可以使用by来指定合并所依据的列
+很好很强大！
+```{r}
+try(left_join(df1, df2))
+colnames(df1) = c("x1", "x2")
+df1 = tbl_df(df1)
+colnames(df2) = c("x1", "x3")
+# colnames(df2) = c("x4", "x3")
+df2 = tbl_df(df2)
+left_join(df1, df2)
+right_join(df1, df2)
+inner_join(df1, df2)
+full_join(df1, df2)
+```
+展示cheatsheet
+
+##生成
+向量 -> 向量
+其实不知道和cbind比有啥好处。。。
+```{r}
+mutate(iris2, Petal.Size = Petal.Width + Petal.Length)
+mutate(sl, lead)
+mutate(iris2, cumsum(sl))
+```
+
+##归纳
+向量 -> 标量
+搭配group_by使用效果拔群！
+```{r}
+summarize(group_by(iris,Species), Mean.Petal.Size = mean(Petal.Width + Petal.Length), Mean.Sepal.Size =
+mean(Sepal.Width + Sepal.Length))
+```
+
+```{r}
+attach(iris)
+mps=tapply(Petal.Width+Petal.Length,Species,mean)
+mss=tapply(Sepal.Width+Sepal.Length,Species,mean)
+newdat=data.frame(Species=names(mps),Mean.Petal.Size=mps,Mean.Setal.Size=mss)
+rownames(newdat)=NULL
+newdat
+detach(iris)
+```
+
+使用%>%增加可读性
+```{r}
+tbl_df(iris) %>% group_by(Species) %>% summarise(Mean.Petal.Size = mean(Petal.Width + Petal.Length), Mean.Sepal.Size = mean(Sepal.Width + Sepal.Length))
+```
+
+
+```{r}
+tbl_df(iris) %>% select(-starts_with("Sepal")) %>% group_by(Species) %>% summarize_all(mean) %>% arrange(desc(Petal.Width))
+```
+
+#tidyr
+压根没用过。。。
+强项似乎在于对单个变量内部的处理
+```{r}
+library(tidyr)
+```
+
+```{r}
+iris.gt = tbl_df(data.frame("id"=1:nrow(iris),iris)) %>% gather(measure,value,Sepal.Length:Petal.Width) %>% arrange(id)
+```
+
+```{r}
+spread(iris.gt, measure, value) %>% select(-id)
+```
+
+```{r}
+iris.gt %>% separate(phenotype, into = c("location", "measure"))
+```
+

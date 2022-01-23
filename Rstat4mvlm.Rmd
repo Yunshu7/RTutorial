@@ -1,0 +1,132 @@
+---
+title: "Rstat4mvlm"
+author: "Yunshu Zhang"
+date: "12/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# R语言系列教学——常用统计函数
+# 多元线性回归模型与模型选择
+
+## 什么是多元线性回归？
+$$
+{Y_i} = {\beta _0} + {\beta _1}{X_{i1}} + ... + {\beta _p}{X_{ip}} + {\varepsilon _i}
+$$
+or 矩阵表达
+$$
+{\mathbf{Y = X\beta  + \varepsilon }}
+$$
+
+## 为什么我们要引入多元线性回归？
+简单的线性模型不够好（解释能力与预测能力）
+但从简单走向复杂的同时也会出现很多新的问题
+
+## 实现
+
+```{r}
+data(mtcars)
+mod1 = lm(mpg ~ hp + wt + am, data = mtcars)
+summary(mod1)
+predict(mod1, newdata = data.frame(hp = 100, wt = 3, am = 1))
+mod2 = lm(mpg ~ ., data = mtcars)
+mod0 = lm(mpg ~ wt, data = mtcars)
+summary(mod0)
+summary(mod1)
+summary(mod2)
+```
+
+注：
+大部分操作与简单线性回归完全相同
+可以发现此时整个模型的显著程度区别于每个变量的显著程度
+可以发现Multiple R-squared随着变量增加始终提升
+而Adjusted R-squared并不一定，暗示变量不是越多越好
+最大的模型中，尽管模型显著，但没有任何一个变量是显著的（矛盾？）
+
+## 修正已有拟合模型
+
+```{r}
+mod3 = update(mod1, . ~ . + cyl)
+summary(mod3)
+mod4 = update(mod2, . ~ . - am)
+summary(mod4)
+mod5 = update(mod2, log(.) ~ .)
+summary(mod5)
+```
+
+## 交叉项
+
+如果感觉现有模型不够好，可以考虑加入交叉项
+```{r}
+mod6 = update(mod1, . ~ . + am * wt, data = mtcars)
+summary(mod6)
+```
+
+类别型变量生成的交叉项的解释：
+使得其他变量对不同分组存在不同影响（系数不同）
+$$
+\begin{gathered}
+  Y = {\beta _0} + {\beta _1}{X_1} + {\beta _2}{X_2} + {\beta _3}{X_1}{X_2} \hfill \\
+  {X_2} = 1:Y = {\beta _0} + {\beta _1}{X_1} + {\beta _2} + {\beta _3}{X_1} = {\beta _0} + {\beta _2} + \left( {{\beta _1} + {\beta _3}} \right){X_1} \hfill \\
+  {X_2} = 0:Y = {\beta _0} + {\beta _1}{X_1} \hfill \\ 
+\end{gathered} 
+$$
+
+## 共线性
+如果有部分变量互相相关，则这两个变量会互相影响导致估计误差很大
+严格相关时会导致部分变量无法估计
+3x = x + 2x = 0 * x + 1.5 * (2x) = 3 * x + 0 * (2x)
+
+```{r}
+mtcars2 = cbind(mtcars, wt2 = 2 * mtcars[,"wt"])
+modwrong = lm(mpg ~ ., data = mtcars2)
+summary(modwrong)
+kappa(modwrong)
+kappa(t(as.matrix(mtcars)) %*% (as.matrix(mtcars)))
+```
+
+```{r}
+n = nrow(mtcars)
+mtcars2 = cbind(mtcars, wt2 = 2 * mtcars[,"wt"] + rnorm(n, 0, 0.1))
+modwrong = lm(mpg ~ ., data = mtcars2)
+summary(modwrong)
+kappa(modwrong)
+kappa(t(as.matrix(mtcars)) %*% (as.matrix(mtcars)))
+```
+
+## 模型选择
+
+这里我们暂时先考虑变量选择，即选出少量重要的因素
+有很多的选择方法，没有哪个是绝对最优的
+AIC：step()
+```{r}
+step(mod2)
+```
+
+```{r}
+modaic = lm(mpg ~ wt + qsec + am, data = mtcars)
+summary(modaic)
+```
+
+BIC: step(k = log(n))
+
+```{r}
+step(mod2, k = log(n))
+```
+
+统计意义上论证某些变量是否可以去除还需要模型比较
+一般比较一个full model和一个reduced model
+```{r}
+anova(modaic,mod2)
+```
+
+
+
+
+
+
+
+

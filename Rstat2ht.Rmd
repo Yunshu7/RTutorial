@@ -1,0 +1,183 @@
+---
+title: "Rstat2ht"
+author: "Yunshu Zhang"
+date: "12/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# R语言系列教学——常用统计函数
+# 常见假设检验与区间估计
+
+两个几乎对应的概念
+假设检验：用p值衡量数据与关于参数的原假设的差异程度
+区间估计：基于数据推断对应参数的一个可能区间
+如果区间包含对应原假设值--->接受原假设
+如果区间不包含对应原假设值--->拒绝原假设
+某种意义上来说区间估计的信息更多或更直接
+但有些时候假设检验对应的区间估计难以得到或不存在
+
+## 均值检验：t test
+
+### 单样本
+```{r}
+data(mtcars)
+attach(mtcars)
+t.test(wt, mu = 3)
+t.test(wt, mu = 3, alternative = "greater")
+```
+
+注：
+1. 理论来说t test依赖正态性假设
+2. 但由中心极限定理，大样本也可以用
+3. 但多大是大呢？30？Sknewness！
+(ref: How Large Does n Have to be for Z and t Intervals?)
+4. 还有一个z test，基于方差已知这个现实中不靠谱的假设
+
+### 双样本
+```{r}
+wt_am = wt[am == 0]
+wt_mn = wt[am == 1]
+t.test(wt_am, wt_mn)
+t.test(wt_am, wt_mn, var.equal = T)
+```
+
+注：后者依赖于方差相等假设，power可能更高但一般不推荐（后面会讲如何检验）
+
+### sample size determination based on power function
+
+功效函数：给定真实参数值和样本量，假设被拒绝的概率
+由此反推，如果给定真实参数值和期望的假设被拒绝的概率，样本量需要多少？
+
+```{r}
+power.t.test(n = 32, delta = abs(3.5 - 3), sd = sd(wt), sig.level = 0.05, power = NULL, type = "one.sample", alternative = "one.sided")
+power.t.test(n = 32, delta = abs(3.2 - 3), sd = sd(wt), sig.level = 0.05, power = NULL, type = "one.sample", alternative = "one.sided")
+```
+
+```{r}
+power.t.test(n = NULL, delta = abs(3.2 - 3), sd = sd(wt), sig.level = 0.05, power = 0.9, type = "one.sample", alternative = "one.sided")
+power.t.test(n = NULL, delta = abs(3.5 - 3), sd = sd(wt), sig.level = 0.05, power = 0.9, type = "one.sample", alternative = "one.sided")
+power.t.test(n = NULL, delta = abs(3.2 - 3), sd = sd(wt), sig.level = 0.05, power = 0.8, type = "one.sample", alternative = "one.sided")
+```
+
+如果是双样本，标准差建议使用双样本标准差的平方平均
+```{r}
+power.t.test(n = NULL, delta = abs(1 - 0), sd = sqrt(var(wt_am) + var(wt_mn)), sig.level = 0.05, power = 0.9, type = "two.sample", alternative = "two.sided")
+```
+
+### 配对t检验
+
+为了提高功效，在实验条件允许的情况下，我们可以采集配对数据
+每对数据其他协变量相近（控制变量法的统计版）
+此时不应使用之前的t test (over conservative!)
+因为两组样本之间存在强相关性，从而带来更高的precision and power
+```{r}
+x = c(113, 120, 138, 120, 100, 118, 138, 123)
+y = c(138, 116, 125, 136, 110, 132, 130, 110)
+cor(x, y)
+t.test(x, y, paired = T)
+t.test(x, y)
+```
+
+
+## 方差检验：F test
+
+检验两组样本方差是否相同
+```{r}
+var.test(wt_am, wt_mn)
+```
+
+注：
+1. 还有单样本的F test，R甚至没有收录，因为不常用
+2. 这个检验基于正态性假设且极其敏感（如何检验正态后面讲）
+
+
+## 相关性检验
+
+```{r}
+cor.test(x, y)
+```
+
+
+## 正态性检验
+
+### 正态W检验法 Shapiro-Wilk
+```{r}
+shapiro.test(wt)
+qqnorm(wt)
+qqline(wt)
+```
+
+```{r}
+shapiro.test(runif(100))
+```
+
+注：
+1. 检验和QQ plot都很重要
+2. 还有一些非参的方法(KS, Pearson)，但仅就正态性这一问题来说S-W的power更大
+(ref: Power comparisons of Shapiro-Wilk, Kolmogorov-Smirnov, Lilliefors and Anderson-Darling tests)
+
+
+## Pearson卡方检验
+
+### 单变量
+
+（默认是）检验概率是否均匀
+```{r}
+x = c(210, 312, 170, 85, 223)
+chisq.test(x)
+```
+
+注：
+1. 也可以设置成给定的非均匀概率
+2. 本质是刻画观测数据与期望数据的差距
+
+
+### 双变量（内联表）
+
+检验两个变量是否独立
+```{r}
+X = matrix(c(60, 3, 32, 11), 2, 2)
+X
+chisq.test(X)
+```
+
+注：
+1. 本质是通过边际概率+独立性假设计算联合概率，进而计算期望频数并于数据比较
+2. 检验仅能说明存在相关性而非因果性
+3. 若想获得因果性，需要修改的并非是检验，而是实验设计（随机化！）
+4. 若某一单元格的期望频数小于5，则检验可能不可靠，R会给出warning
+
+## Fisher's exact test
+
+针对期望频数小于5的列联表
+```{r}
+X = matrix(c(4, 5, 18, 6), 2, 2)
+X
+fisher.test(X)
+```
+
+```{r}
+chisq.test(X)
+```
+
+注：
+1. 通过考虑所有的排列组合去刻画概率（Lady tasting tea），因此是exact的
+2. 在因果推断中是一个重要的检验
+3. 可能会出现样本数量过大无法考察所有的组合的情况，此时需要Monte Carlo方法近似
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,160 @@
+---
+title: "Rstat5diag"
+author: "Yunshu Zhang"
+date: "1/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# R语言系列教学——常用统计函数
+# 线性回归模型的诊断与广义线性模型
+
+## 线性回归模型的诊断
+
+### 什么是诊断？
+检查模型的假设是否符合
+
+### 为什么需要做诊断？
+“All models are wrong, but some are useful” —— George Box
+需要检查模型是否可靠，从而对结果的可靠性有所把握
+
+### 线性模型的假设是什么？
+误差 i.i.d.(独立同分布) 服从均值为零的正态分布
+实际中使用残差来估计误差
+$$
+{\hat \varepsilon _i} = {\hat y_i} - {y_i}
+$$
+1. 均值为零（残差均匀分布在0的两侧）
+2. 正态分布（正态性检验/QQplot）
+3. 同分布（方差相同）
+4. 独立（一般不检验）
+
+### 一步到位的诊断函数
+```{r}
+data(mtcars)
+mod = lm(mpg ~ wt, data = mtcars)
+plot(mod)
+```
+
+残差图：看残差是否均匀分布在两侧
+简单线性回归也可以令x轴为自变量，以获得更高的解释性
+但对于多元线性回归一般不便于这么做，通常选择以拟合值作为x轴
+```{r}
+plot(x = mtcars$wt, y = mod$residuals)
+```
+
+也可以使用标准化残差（内学生化残差），看是否服从标准正态
+主要看落在(-2，2)之外的点有多少
+```{r}
+plot(x = mod$fitted.values, y = rstandard(mod))
+```
+
+QQplot：看数据是否正态
+也可以使用S-W检验
+```{r}
+shapiro.test(mod$residuals)
+```
+
+
+```{r}
+modaic = lm(mpg ~ wt + qsec + am, data = mtcars)
+plot(modaic)
+```
+
+```{r}
+plot(x = modaic$fitted.values, y = rstandard(modaic))
+```
+
+```{r}
+shapiro.test(modaic$residuals)
+```
+
+
+### 如果诊断结果说明模型有误，应该怎么办？
+
+1. 检查线性型是否有误，并考虑对变量做变换
+很多非线性模型都可以通过变换转化为线性模型
+$$
+\begin{gathered}
+  y = k{e^{ax}} \Leftrightarrow \log y = ax + \log k \hfill \\
+  y = {x^k} \Leftrightarrow \log y = k\log x \hfill \\ 
+\end{gathered} 
+$$
+
+2. 检查是否有离群值影响因子很大的数据点，并考虑是否进行剔除
+如果是简单线性回归，永远建议先画图
+```{r}
+plot(x = mtcars$wt, y = mtcars$mpg)
+text(x = mtcars$wt, y = mtcars$mpg, labels = rownames(mtcars), cex = 0.8)
+```
+
+```{r}
+mtcars_light = subset(mtcars, wt < 5)
+modlight = lm(mpg ~ wt, data = mtcars_light)
+plot(modlight)
+```
+
+剔除时一定要谨慎谨慎再谨慎！
+要判断异常值究竟是因错误输入而异常还是属于数据本身特征
+下结论时避免extrapolate
+
+多元线性回归怎么办？
+Leverage score(Hat values)
+反映该样本估计值波动的情况
+检查是否大于2(p + 1) / n
+```{r}
+which(hatvalues(mod) > 2 * (1 + 1) / 32)
+```
+
+Cook's distance
+找出对回归结果影响较大的点
+没有一个严格的临界值
+
+
+## 广义线性模型
+
+对线性模型的一个拓展
+主要针对其他类型的响应变量
+将响应变量的期望与自变量的线性组合通过连接函数联系起来
+
+### 逻辑斯蒂回归(Logistic regression)
+响应变量：0或1
+$$
+\begin{gathered}
+  P\left( {Y = 1} \right) = {\text{logi}}{{\text{t}}^{ - 1}}\left( {\beta X} \right) = \frac{{{e^{\beta X}}}}{{1 + {e^{\beta X}}}} \hfill \\
+  {\text{logit}}(P) = \log \left( {\frac{P}{{1 - P}}} \right) = \beta X \hfill \\ 
+\end{gathered} 
+$$
+
+```{r}
+plot(x = mtcars$wt, y = mtcars$am)
+```
+
+```{r}
+modlogit = glm(am ~ wt, family = binomial, data = mtcars)
+summary(modlogit)
+```
+
+```{r}
+plot(x = mtcars$wt, y = modlogit$fitted.values)
+```
+
+## Probit回归
+即连接函数改为了正态分布cdf
+```{r}
+modprobit = glm(am ~ wt, family = binomial(link = probit), data = mtcars)
+summary(modprobit)
+```
+
+```{r}
+plot(x = mtcars$wt, y = modprobit$fitted.values)
+```
+
+
+
+
+
+

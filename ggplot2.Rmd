@@ -1,0 +1,250 @@
+---
+title: "ggplot2"
+author: "Yunshu Zhang"
+date: "5/20/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 零、引言
+
+## 什么是ggplot2?
+ggplot2: a package widly used to make fancy plots
+Layered grammar of graphics made by Hadley Wickham(2019 CPOSS)
+
+```{r}
+install.packages("ggplot2")
+library(ggplot2)
+```
+
+## 为什么我们要用ggplot2?
+好看！好看！好看！
+对于复杂任务（尤其对于分组的数据），操作相较于R basic函数更为简单
+
+## Credit to 数据科学导论 by 清华大学俞声老师
+
+# 一、基本语法
+
+## 1、举个栗子
+```{r}
+data("mtcars")
+mtcars$am = factor(mtcars$am, levels=c(0,1), labels=c("Automatic", "Manual")) 
+mtcars$vs = factor(mtcars$vs, levels=c(0,1), labels=c("V-Engine", "Straight Engine"))
+mtcars$cyl = factor(mtcars$cyl)
+```
+
+
+```{r}
+ggplot(data=mtcars, aes(x=wt, y=mpg))+ 
+  geom_point(pch=17, color="blue",size=2)+ 
+  geom_smooth(method="lm",color="red", linetype=2)+ 
+  labs(title="Automobile Data",x="Weight", y="Miles Per Gallon")
+```
+
+总结：图层式语法（photoshop）
+通过“+”依次构建新的图层
+顺序很重要!（不满足交换律）
+基本元素：ggplot(data and aesthetics) + geom(S) + labels
+
+
+## 2、aesthetics
+Aesthetics – things we can perceive on the plot, such as position, color, shape…
+可设置在ggplot(): global(preferred)
+也可设置在各个geom中：local override
+
+## 3、geoms
+绘图种类
+```{r}
+geom_bar()
+geom_boxplot()
+geom_density()
+geom_histogram()
+geom_abline()
+geom_line()
+geom_point()
+geom_jitter()
+geom_rug()
+geom_smooth()
+geom_text()
+```
+
+## 4、labels and title
+title is default to be left-aligned
+To center title:
+theme(plot.title = element_text(hjust = 0.5))
+theme_update(plot.title = element_text(hjust = 0.5))
+```{r}
+labs(x, y, title)
+```
+
+## 5、再举些栗子
+aes(after_stat(density))使histogram以density为y轴
+```{r}
+ggplot(data = mtcars, aes(x = mpg, after_stat(density))) + geom_histogram(binwidth = 5, fill = "grey") + geom_density(col = "red") + labs(title = "Density of MPG") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+boxplot:将组别变量作为x
+```{r}
+ggplot(data = mtcars, aes(x = am, y = mpg)) + geom_boxplot()
+```
+
+barplot默认计数
+```{r}
+ggplot(data = mtcars, aes(x = am)) + geom_bar()
+```
+
+可通过stat = "identity"使得barplot直接显示每一类的唯一一个数值
+```{r}
+library(dplyr)
+dat=mtcars %>% group_by(am) %>% summarise(mean.mpg=mean(mpg))
+dat
+
+ggplot(dat,aes(x=am,y=mean.mpg))+geom_bar(stat = "identity")
+```
+
+
+# 二、color, fill, shape
+可指定为某一变量
+进而自动实现分组的效果
+同时自动生成对应图例
+选取多个参数分别指定为不同变量
+可实现多维变量生成的分组
+```{r}
+ggplot(data = mtcars, aes(x = wt, y = mpg, color = am, shape = am)) + geom_point()
+```
+
+```{r}
+ggplot(data = mtcars, aes(x = wt, y = mpg, color = cyl, shape = am)) + geom_point()
+```
+
+```{r}
+ggplot(data = mtcars, aes(x = am, y = mpg, fill = am)) + geom_boxplot()
+```
+
+```{r}
+ggplot(data = mtcars, aes(x = cyl, y = mpg, fill = am)) + geom_boxplot()
+```
+
+```{r}
+ggplot(data = mtcars, aes(x = am, y = mpg)) + geom_boxplot() + geom_jitter(aes(color=cyl,alpha=0.3))
+```
+
+```{r}
+ggplot(data = mtcars, aes(x = mpg, fill = am, alpha = 0.3)) + geom_density()
+```
+
+## 三、Faceting
+分开画图有时能更好地体现各组的信息
+facet_grid() or facet_wrap()
+纵向分组~横向分组
+```{r}
+ggplot(data=mtcars, aes(x=hp, y=mpg, shape=cyl, color=cyl)) + geom_point(size=3) + facet_grid(.~am) + labs(title="Automobile Data by Engine Type", x="Horsepower",y="Miles Per Gallon")
+```
+
+```{r}
+ggplot(data=mtcars, aes(x=hp, y=mpg, shape=cyl, color=cyl)) + geom_point(size=3) + facet_grid(am~.) + labs(title="Automobile Data by Engine Type", x="Horsepower",y="Miles Per Gallon")
+```
+
+```{r}
+ggplot(data=mtcars, aes(x=hp, y=mpg, shape=cyl, color=cyl)) + geom_point(size=3) + facet_grid(.~am + vs) + labs(title="Automobile Data by Engine Type", x="Horsepower",y="Miles Per Gallon")
+```
+
+```{r}
+ggplot(data=mtcars, aes(x=hp, y=mpg, shape=cyl, color=cyl)) + geom_point(size=3) + facet_grid(am~vs) + labs(title="Automobile Data by Engine Type", x="Horsepower",y="Miles Per Gallon")
+```
+
+```{r}
+ggplot(data=mtcars, aes(x=mpg, fill=cyl, alpha = 0.3)) + geom_density() + facet_grid(am~vs) + labs(title="Automobile Data by Engine Type",x="Miles Per Gallon", y="Density")
+```
+
+
+## 四、Scale
+控制如何从data到aesthetics
+scale_[color/fill]_[brewer/manual/gradient]
+Set palette in brewer 
+```{r}
+ggplot(data = mtcars, aes(x = mpg, fill = am, alpha = 0.3)) + geom_density() + scale_fill_brewer(palette = "Dark2")
+```
+
+Set values in manual
+```{r}
+ggplot(data = mtcars, aes(x = mpg, fill = am, alpha = 0.3)) + geom_density() + scale_fill_manual(values = c("red", "blue"))
+```
+
+Set low and high in gradient (continuous data)
+但是改参数似乎没卵用。。。
+```{r}
+ggplot(data = mtcars, aes(x = wt, y = mpg, color = hp)) + geom_point() + scale_fill_gradient(low = "white", high = "blue")
+```
+
+We also usually change the tick marks, tick mark labels, and limits of the axis
+scale_[x/y]_[continuous/discrete](breaks, labels, limits)
+```{r}
+ggplot(data = mtcars, aes(x = cyl, y = mpg, fill = am)) + geom_boxplot() + scale_x_discrete(breaks = c(4, 6, 8), labels = c("Four", "Six", "Eight"))
+```
+
+```{r}
+ggplot(data = mtcars, aes(x = cyl, y = mpg, fill = am)) + geom_boxplot() + scale_y_continuous(breaks = c(10,20,30,40), limits = c(5, 40))
+```
+
+## 五、Theme
+调节绘图的各种细节设置
+也可直接使用pre-made theme
+```{r}
+ggplot(data=mtcars, aes(x=hp, y=mpg, shape=cyl, color=cyl)) + geom_point(size=3) + facet_grid(.~am) + labs(title="Automobile Data by Engine Type", x="Horsepower",y="Miles Per Gallon") + theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
+```
+
+```{r}
+ggplot(data=mtcars, aes(x=hp, y=mpg, shape=cyl, color=cyl)) + geom_point(size=3) + facet_grid(.~am) + labs(title="Automobile Data by Engine Type", x="Horsepower",y="Miles Per Gallon") + theme_classic() 
+```
+
+## 六、多图形的绘制
+```{r}
+library(patchwork)
+```
+
+将图片存储下来
+|横向，/纵向
+```{r}
+g1 = ggplot(data = mtcars, aes(x = am, y = mpg)) + geom_boxplot() + geom_jitter(aes(color=cyl,alpha=0.3))
+```
+
+```{r}
+g2 = ggplot(data = mtcars, aes(x = mpg, fill = am, alpha = 0.3)) + geom_density()
+```
+
+```{r}
+g3 = ggplot(data = mtcars, aes(x = wt, y = mpg, color = am, shape = am)) + geom_point()
+```
+
+```{r}
+(g1 | g2) / g3
+```
+
+## 七、图片的存储
+可以使用传统方法
+也可使用ggsave(file, plot, width, height)
+也可通过+直接连接
+```{r}
+ggsave(file = "g1.png", plot = g1, width = 4, height = 4)
+```
+
+```{r}
+ggplot(data = mtcars, aes(x = am, y = mpg)) + geom_boxplot() + geom_jitter(aes(color=cyl,alpha=0.3)) + ggsave(file = "g1.png", width = 4, height = 4)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
