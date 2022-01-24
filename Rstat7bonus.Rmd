@@ -1,0 +1,198 @@
+---
+title: "Rstat7bonus"
+author: "Yunshu Zhang"
+date: "1/23/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# R语言系列教学——常用统计函数
+# 番外篇：答粉丝问
+
+## 之前视频笔记的下载地址
+https://github.com/Yunshu7/RTutorial
+
+## 因果推断
+
+埋个大坑，希望以后有机会填（咕咕咕）
+
+## 结构方程模型
+
+不好意思不太会= =
+
+## VAR(Value at Risk?)
+
+不好意思也没太听说过= =
+
+## 广义线性混合模型(Generalized linear mixed model)
+
+解决随机效应(Random effect)
+特点1：类别型变量
+特点2：无法在新数据中复现
+区别于fixed effect理解
+eg. 城市
+
+R语言中的实现需要使用lme4包
+并使用lmer函数
+```{r}
+library(lme4)
+library(lattice)
+# View(sleepstudy)
+xyplot(Reaction ~ Days | Subject, sleepstudy, type = c("g","p","r"),
+       index = function(x,y) coef(lm(y ~ x))[1],
+       xlab = "Days of sleep deprivation",
+       ylab = "Average reaction time (ms)", aspect = "xy")
+fm1 <- lmer(Reaction ~ Days + (1 | Subject), sleepstudy)
+summary(fm1)
+fm2 <- lmer(Reaction ~ Days + (Days | Subject), sleepstudy)
+summary(fm2)
+```
+
+对于广义线性模型，使用glmer函数
+```{r}
+xyplot(incidence/size ~ period|herd, cbpp, type=c('g','p','l'),
+       layout=c(3,5), index.cond = function(x,y)max(y))
+m1 <- glmer(cbind(incidence, size - incidence) ~ period + (1 | herd), family = binomial, data = cbpp)
+```
+
+当有多个随机效应出现时，需要考虑它们的结构
+分为crossed effect和nested effect
+见https://ourcodingclub.github.io/tutorials/mixed-models/
+
+
+## 蒙特卡洛
+
+使用数值模拟的方法去估计一个很难甚至无法理论计算的量
+核心原理：大数定律(Law of Large Numbers)
+$$
+\overline {g\left( X \right)}  \to E\left[ {g\left( X \right)} \right] = \int {g\left( x \right)f\left( x \right)dx} 
+$$
+因此，只要一个量可以写成某一个随机变量的期望，就都可以估计
+
+eg. 估计$\pi$
+$$
+\begin{gathered}
+  \frac{\pi }{4} = {S_A} = \iint {I\left\{ {\left( {x,y} \right) \in A} \right\}dxdy} \hfill \\
+   = \iint\limits_{0 \leqslant x,y \leqslant 1} {I\left\{ {\left( {x,y} \right) \in A} \right\} \cdot 1dxdy} \hfill \\
+   = E\left[ {I\left\{ {\left( {X,Y} \right) \in A} \right\}} \right] \hfill \\
+  \left( {X,Y} \right) \sim U\left( {\left[ {0,1} \right] \times \left[ {0,1} \right]} \right) \hfill \\ 
+\end{gathered} 
+$$
+
+```{r}
+K = 10000
+# K = 1000000
+rec = 0 # record whether (x,y) is in A
+for (k in 1:K) {
+  x = runif(1)
+  y = runif(1)
+  if(x ^ 2 + y ^ 2 <= 1)
+    rec = rec + 1
+}
+rec / K * 4
+```
+
+更快速的版本
+```{r}
+K = 1000000
+x = runif(K)
+y = runif(K)
+indicator = x ^ 2 + y ^ 2 <= 1
+mean(indicator) * 4
+```
+
+或者使用一维积分
+$$
+\begin{gathered}
+  \frac{\pi }{4} = {S_A} = \int_0^1 {\sqrt {1 - {x^2}} dx}  \hfill \\
+   = \int_0^1 {\sqrt {1 - {x^2}}  \cdot 1dx}  \hfill \\
+   = E\left[ {\sqrt {1 - {X^2}} } \right] \hfill \\
+  X\sim U\left( {\left[ {0,1} \right]} \right) \hfill \\ 
+\end{gathered} 
+$$
+
+```{r}
+K = 1000000
+x = runif(K)
+y = sqrt(1 - x ^ 2)
+mean(y) * 4
+```
+
+如果随机模拟的过程并非随机独立样本，而是一个马尔科夫链
+则称为MCMC(Monte Carlo Markov Chain)
+在贝叶斯统计中有着重要的作用
+
+
+## PLS(Penalized least square)
+
+在普通线性回归的基础上加入对系数的惩罚
+即最小化squared error + L_k loss of the coefficients
+当k = 1时，称为Lasso regression
+当k = 2时，称为Ridge regression
+它们往往能减少过拟合带来的影响
+其中Lasso甚至还有变量选择的功效
+
+R语言中的实现需要使用glmnet包
+```{r}
+library(glmnet)
+n = 1000
+p = 10
+X = matrix(rnorm(n * p), nrow = n, ncol = p)
+Y = X[, 1] + X[, 2] - 2 * X[, 3]
+mod_lasso = cv.glmnet(X, Y)
+coef(mod_lasso)
+mod_lasso$cvm
+# coef(mod_lasso, s = mod_lasso$lambda.min)
+coef(mod_lasso, s = mod_lasso$lambda.1se)
+yhat = predict(mod_lasso, newx = X, s = "lambda.min")
+mean((Y - yhat) ^ 2)
+```
+
+调整alpha为0时则变为ridge regression
+```{r}
+mod_ridge = cv.glmnet(X, Y, alpha = 0)
+coef(mod_ridge)
+```
+可以发现ridge regression并没有变量选择的功效
+
+
+## 广义加性模型(Genarlized additive model)
+
+可加性：各维度的X之间没有交互作用
+$$
+Y = {f_1}\left( {{X_1}} \right) + {f_2}\left( {{X_2}} \right) + ... + {f_p}\left( {{X_p}} \right) + \varepsilon 
+$$
+一般认为每一项均为$X_k$的任意函数（非参模型）
+
+R语言中的实现需要使用mgcv包
+```{r}
+library(mgcv)
+n = 1000
+p = 4
+X = matrix(rnorm(n * p), nrow = n, ncol = p)
+Y = X[, 1] + X[, 2] ^ 2 - exp(X[, 3])
+dat = cbind(X, Y)
+dat = as.data.frame(dat)
+colnames(dat) = c("X1", "X2", "X3", "X4", "Y")
+mod_gam = gam(Y ~ s(X1) + s(X2) + s(X3) + s(X4), data = dat)
+summary(mod_gam)
+plot(mod_gam)
+X = as.data.frame(X)
+colnames(X) = c("X1", "X2", "X3", "X4")
+yhat = predict.gam(mod_gam, newdata = X)
+mean((Y - yhat) ^ 2)
+```
+广义加性模型只需要设定好family即可
+
+
+
+
+
+
+
+
+
+
